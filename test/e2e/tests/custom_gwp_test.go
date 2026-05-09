@@ -156,14 +156,11 @@ func TestCustomGWP(t *testing.T) {
 	r.EventuallyWithT(func(c *assert.CollectT) {
 		gc := &gwv1.GatewayClass{}
 		err := testInstallation.ClusterContext.Client.Get(ctx, client.ObjectKey{Name: wellknown.DefaultGatewayClassName}, gc)
-		assert.NoError(c, err, "failed to get kgateway GatewayClass")
-		if !assert.NotNil(c, gc.Spec.ParametersRef, "kgateway GatewayClass spec.parametersRef is nil") {
-			return
-		}
+		require.NoError(c, err, "failed to get kgateway GatewayClass")
+		require.NotNil(c, gc.Spec.ParametersRef, "kgateway GatewayClass spec.parametersRef is nil")
 		assert.Equal(c, "custom-gwp", gc.Spec.ParametersRef.Name, "expected kgateway GatewayClass parametersRef.name to be 'custom-gwp'")
-		if assert.NotNil(c, gc.Spec.ParametersRef.Namespace, "kgateway GatewayClass spec.parametersRef.namespace is nil") {
-			assert.Equal(c, expectedNamespace, *gc.Spec.ParametersRef.Namespace, "expected kgateway GatewayClass parametersRef.namespace to be '%s'", expectedNamespace)
-		}
+		require.NotNil(c, gc.Spec.ParametersRef.Namespace, "kgateway GatewayClass spec.parametersRef.namespace is nil")
+		assert.Equal(c, expectedNamespace, *gc.Spec.ParametersRef.Namespace, "expected kgateway GatewayClass parametersRef.namespace to be '%s'", expectedNamespace)
 		// Verify kgateway GatewayClass uses GatewayParameters GVK (gateway.kgateway.dev)
 		assert.Equal(c, gwv1.Group("gateway.kgateway.dev"), gc.Spec.ParametersRef.Group, "expected kgateway GatewayClass parametersRef.group to be 'gateway.kgateway.dev'")
 		assert.Equal(c, gwv1.Kind("GatewayParameters"), gc.Spec.ParametersRef.Kind, "expected kgateway GatewayClass parametersRef.kind to be 'GatewayParameters'")
@@ -203,16 +200,10 @@ func TestCustomGWP(t *testing.T) {
 	r.EventuallyWithT(func(c *assert.CollectT) {
 		gcUpdated := &gwv1.GatewayClass{}
 		err := testInstallation.ClusterContext.Client.Get(ctx, client.ObjectKey{Name: wellknown.DefaultGatewayClassName}, gcUpdated)
-		if !assert.NoError(c, err, "failed to get kgateway GatewayClass after upgrade") {
-			return
-		}
-		if !assert.NotNil(c, gcUpdated.Spec.ParametersRef, "kgateway GatewayClass spec.parametersRef is nil after upgrade") {
-			return
-		}
+		require.NoError(c, err, "failed to get kgateway GatewayClass after upgrade")
+		require.NotNil(c, gcUpdated.Spec.ParametersRef, "kgateway GatewayClass spec.parametersRef is nil after upgrade")
 		assert.Equal(c, "custom-gwp-2", gcUpdated.Spec.ParametersRef.Name, "expected kgateway GatewayClass parametersRef.name to be 'custom-gwp-2' after upgrade")
-		if !assert.NotNil(c, gcUpdated.Spec.ParametersRef.Namespace, "kgateway GatewayClass spec.parametersRef.namespace is nil after upgrade") {
-			return
-		}
+		require.NotNil(c, gcUpdated.Spec.ParametersRef.Namespace, "kgateway GatewayClass spec.parametersRef.namespace is nil after upgrade")
 		assert.Equal(c, expectedNamespace, *gcUpdated.Spec.ParametersRef.Namespace, "expected kgateway GatewayClass parametersRef.namespace to be '%s' after upgrade", expectedNamespace)
 	}, 60*time.Second, 200*time.Millisecond)
 
@@ -232,21 +223,15 @@ func TestCustomGWP(t *testing.T) {
 	// Assert that eventually the deployment gateway pod is updated with the new label
 	r.EventuallyWithT(func(c *assert.CollectT) {
 		pods, err := kubeutils.GetReadyPodsForDeployment(ctx, testInstallation.ClusterContext.Clientset, proxyObjectMeta)
-		if !assert.NoError(c, err, "failed to get ready pods for deployment after upgrade") {
-			return
-		}
-		if !assert.NotEmpty(c, pods, "no ready pods found for deployment after upgrade") {
-			return
-		}
+		require.NoError(c, err, "failed to get ready pods for deployment after upgrade")
+		require.NotEmpty(c, pods, "no ready pods found for deployment after upgrade")
 
 		pod := &corev1.Pod{}
 		err = testInstallation.ClusterContext.Client.Get(ctx, client.ObjectKey{
 			Namespace: gatewayNamespace,
 			Name:      pods[0],
 		}, pod)
-		if !assert.NoError(c, err, "failed to get pod after upgrade") {
-			return
-		}
+		require.NoError(c, err, "failed to get pod after upgrade")
 		assert.NotNil(c, pod.Labels, "pod labels are nil after upgrade")
 		assert.Contains(c, pod.Labels, "another", "pod should have the 'another' label after upgrade")
 		assert.Equal(c, "label", pod.Labels["another"], "pod should have the new label 'another: label' after upgrade")
@@ -286,35 +271,20 @@ func verifyPodLabel(
 ) {
 	require.New(t).EventuallyWithT(func(c *assert.CollectT) {
 		pods, err := kubeutils.GetReadyPodsForDeployment(ctx, testInstallation.ClusterContext.Clientset, proxyObjectMeta)
-		if err != nil {
-			assert.NoError(c, err, "failed to get ready pods for deployment %s", errorContext)
-			return
-		}
-		if len(pods) == 0 {
-			assert.Fail(c, "no ready pods found for deployment", errorContext)
-			return
-		}
+		require.NoError(c, err, "failed to get ready pods for deployment %s", errorContext)
+		require.NotEmpty(c, pods, "no ready pods found for deployment %s", errorContext)
 
 		pod := &corev1.Pod{}
 		err = testInstallation.ClusterContext.Client.Get(ctx, client.ObjectKey{
 			Namespace: gatewayNamespace,
 			Name:      pods[0],
 		}, pod)
-		if err != nil {
-			assert.NoError(c, err, "failed to get pod %s", errorContext)
-			return
-		}
+		require.NoError(c, err, "failed to get pod %s", errorContext)
 
-		if pod.Labels == nil {
-			assert.Fail(c, "pod labels are nil", errorContext)
-			return
-		}
+		require.NotNil(c, pod.Labels, "pod labels are nil %s", errorContext)
 
 		labelValue, ok := pod.Labels[labelKey]
-		if !ok {
-			assert.Fail(c, fmt.Sprintf("pod does not have '%s' label", labelKey), errorContext)
-			return
-		}
+		require.True(c, ok, fmt.Sprintf("pod does not have '%s' label %s", labelKey, errorContext))
 
 		assert.Equal(c, expectedValue, labelValue, "expected pod label '%s' to be '%s' %s", labelKey, expectedValue, errorContext)
 	}, 60*time.Second, 2*time.Second)
