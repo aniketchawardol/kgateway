@@ -292,8 +292,11 @@ func TestOIDCProviderConfigDiscovererRun(t *testing.T) {
 
 	go o.refresh(ctx)
 
-	// Wait for cache to be cleared (refresh interval is 50ms)
-	time.Sleep(75 * time.Millisecond)
+	// Poll instead of sleep to avoid goroutine scheduling races on loaded CI runners.
+	require.Eventually(t, func() bool {
+		_, _ = o.get(issuer)
+		return atomic.LoadInt64(&requestCount) >= 2
+	}, 500*time.Millisecond, 10*time.Millisecond)
 
 	// Now get should make a new request because cache was cleared
 	config3, err := o.get(issuer)
@@ -309,8 +312,11 @@ func TestOIDCProviderConfigDiscovererRun(t *testing.T) {
 	r.Equal("https://example.com/token", config4.TokenEndpoint)
 	r.Equal(int64(2), atomic.LoadInt64(&requestCount)) // Still 2 requests (from cache)
 
-	// Wait for another cache clear cycle
-	time.Sleep(75 * time.Millisecond)
+	// Poll instead of sleep to avoid goroutine scheduling races on loaded CI runners.
+	require.Eventually(t, func() bool {
+		_, _ = o.get(issuer)
+		return atomic.LoadInt64(&requestCount) >= 3
+	}, 500*time.Millisecond, 10*time.Millisecond)
 
 	// Another get should make a third request because cache was cleared again
 	config5, err := o.get(issuer)
