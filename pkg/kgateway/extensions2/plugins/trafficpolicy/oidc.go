@@ -52,7 +52,7 @@ func newOIDCProviderConfigDiscoverer() *oidcProviderConfigDiscoverer {
 func (o *oidcProviderConfigDiscoverer) refresh(ctx context.Context) {
 	ticker := time.NewTicker(o.cacheRefreshInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
